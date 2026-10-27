@@ -344,7 +344,6 @@
       $('sky-sub').textContent = `颗星 · 第 ${r.day} 天 · ${r.date}`;
     },
   }, { onOpen: id => openReader(id) });
-  let skyFresh = 0;
 
   function renderSky() {
     const L = sky.update(S.mems);
@@ -358,10 +357,10 @@
     const L = sky.layout, n = L.stars.length;
     const days = new Set(L.stars.map(s => s.day).filter(Boolean)).size;
     $('sky-n').textContent = n;
-    $('sky-sub').textContent = !n ? '颗星' : [`颗星`, `${Math.floor(L.from)} — 今天`, `写了 ${days} 天`, skyFresh ? `上次来过之后新亮起 ${skyFresh} 颗` : null].filter(Boolean).join(' · ');
+    $('sky-sub').textContent = !n ? '颗星' : [`颗星`, `${Math.floor(L.from)} — 今天`, `写了 ${days} 天`, sky.arrived ? `新亮起 ${sky.arrived} 颗` : null].filter(Boolean).join(' · ');
     $('sky-play').hidden = n < 2;
   }
-  function showSky() { skyFresh = sky.show(); renderSkyCount(); }
+  function showSky() { sky.show(); renderSkyCount(); }
   function renderSkyCard(m) {
     const card = $('sky-card'); card.replaceChildren();
     if (!m) {

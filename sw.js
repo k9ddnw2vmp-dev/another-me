@@ -2,7 +2,7 @@
  * Lets the app open and work offline. Memories and sign-in never pass through this cache:
  * requests to Supabase always go straight to the network.
  */
-const VERSION = 'another-me-5';
+const VERSION = 'another-me-6';
 const SHELL = ['./', 'index.html', 'app.js', 'core.js', 'sync.js', 'sky.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
