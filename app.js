@@ -58,6 +58,7 @@
   function friendly(err) {
     const m = String((err && (err.message || err.error_description)) || err || '');
     if (/fetch|network|load failed|offline/i.test(m)) return '连不上云端';
+    if (/could not find the table|PGRST205|relation .* does not exist/i.test(m)) return '云端还没有建表，请在 Supabase 的 SQL Editor 里运行 supabase/schema.sql';
     if (/jwt|token|401|not authenticated/i.test(m)) return '登录已过期，请到「备份」里退出后重新登录';
     if (/row-level security|violates/i.test(m)) return '云端拒绝了写入，请检查数据库权限设置';
     return m || '未知错误';
