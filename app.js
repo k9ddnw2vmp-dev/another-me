@@ -434,9 +434,57 @@
     const id = uuid();
     const ext = ((file.name || '').match(/\.[A-Za-z0-9]{1,8}$/) || [''])[0].toLowerCase();
     const path = `${S.user.id}/${id}${ext}`;
-    const { error } = await S.client.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+    const att = { id, path, type: file.type || (isHeic({ name: file.name }) ? 'image/heic' : ''), name: file.name || id + ext, size: file.size };
+    const { error } = await S.client.storage.from(BUCKET).upload(path, file, { contentType: att.type || 'application/octet-stream', upsert: false });
     if (error) throw error;
-    return { id, path, type: file.type || '', name: file.name || id + ext, size: file.size };
+    // The original stays untouched; a HEIC photo also gets a JPEG copy that every browser can show.
+    if (isHeic(att)) att.preview = await jpegFrom(file).then(jpg => uploadPreview(id, jpg)).catch(() => undefined);
+    return att;
+  }
+
+  /* HEIC is the iPhone's photo format and only Safari can display it. */
+  const HEIC_LIB = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+  const isHeic = a => /image\/hei[cf]/i.test(a.type || '') || /\.hei[cf]$/i.test(a.name || '');
+  let heicLib = null;
+  function loadHeic() {
+    if (window.heic2any) return Promise.resolve(window.heic2any);
+    return heicLib || (heicLib = new Promise((ok, bad) => {
+      const el = h('script', { src: HEIC_LIB });
+      el.onload = () => ok(window.heic2any);
+      el.onerror = () => { heicLib = null; bad(new Error('照片转换工具没有加载成功，请联网后再打开')); };
+      document.head.append(el);
+    }));
+  }
+  async function jpegFrom(blob) {
+    let bmp = await createImageBitmap(blob).catch(() => null); // Safari decodes HEIC itself
+    if (!bmp) {
+      const out = await (await loadHeic())({ blob, toType: 'image/jpeg', quality: 0.92 });
+      bmp = await createImageBitmap(Array.isArray(out) ? out[0] : out);
+    }
+    const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+    const c = h('canvas', { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    return new Promise((ok, bad) => c.toBlob(b => (b ? ok(b) : bad(new Error('照片转换失败'))), 'image/jpeg', 0.86));
+  }
+  async function uploadPreview(id, jpg) {
+    const path = `${S.user.id}/${id}.preview.jpg`;
+    const { error } = await S.client.storage.from(BUCKET).upload(path, jpg, { contentType: 'image/jpeg', upsert: true });
+    if (error) throw error;
+    return path;
+  }
+  // A photo saved before copies were made gets its copy the first time a non-Safari browser converts it.
+  async function keepPreview(a, jpg) {
+    if (S.mode !== 'cloud' || !S.client || !navigator.onLine) return;
+    try {
+      const preview = await uploadPreview(a.id, jpg);
+      const m = S.mems.find(x => (x.attachments || []).some(y => y.id === a.id));
+      if (!m) return;
+      const { id, ...doc } = m;
+      await S.sync.save(id, { ...doc, attachments: doc.attachments.map(y => (y.id === a.id ? { ...y, preview } : y)) });
+      a.preview = preview;
+      scheduleSync();
+    } catch { /* it will simply convert again next time */ }
   }
 
   async function mediaUrl(a) {
@@ -600,12 +648,41 @@
     if (!a.path) {
       return h('p', { class: 'muted small', style: 'margin:0', text: `「${a.name || a.id}」${a.url ? '还在 Claude 版本里。导入当时导出的记忆包，就能把它搬过来。' : '缺失。'}` });
     }
+    if (isHeic(a)) return heicFigure(a);
     const el = t.startsWith('image/') ? h('img', { alt: a.name || '' })
       : t.startsWith('audio/') ? h('audio', { controls: true, preload: 'none' })
       : t.startsWith('video/') ? h('video', { controls: true, preload: 'metadata' })
       : h('a', { target: '_blank', rel: 'noopener', text: a.name || a.id });
     mediaUrl(a).then(url => { if (!url) return; if (el.tagName === 'A') el.href = url; else el.src = url; });
     return t.startsWith('audio/') ? h('div', null, h('p', { class: 'muted small', style: 'margin:0', text: a.name }), el) : el;
+  }
+
+  function heicFigure(a) {
+    const img = h('img', { alt: a.name || '' }), note = h('p', { class: 'muted small', style: 'margin:0', role: 'status' });
+    const orig = h('a', { class: 'link', target: '_blank', rel: 'noopener', download: a.name || '', text: `下载原件 ${a.name || ''}` });
+    mediaUrl(a).then(url => { if (url) orig.href = url; });
+    const convert = async () => {
+      img.hidden = true;
+      note.textContent = '这是 iPhone 的 HEIC 照片，正在转换成这台设备能显示的格式…';
+      try {
+        const { data, error } = await S.client.storage.from(BUCKET).download(a.path);
+        if (error) throw error;
+        const jpg = await jpegFrom(data);
+        img.src = URL.createObjectURL(jpg); img.hidden = false; note.textContent = '';
+        keepPreview(a, jpg);
+      } catch (err) {
+        note.textContent = `这张照片在这台设备上转换不了（${friendly(err)}）。原件完好，可以下载后查看。`;
+      }
+    };
+    (async () => {
+      const copy = a.preview && await mediaUrl({ path: a.preview });
+      if (copy) { img.src = copy; return; }
+      const url = await mediaUrl(a);
+      if (!url) return;
+      img.onerror = () => { img.onerror = null; convert(); };
+      img.src = url; // Safari shows the original directly
+    })();
+    return h('figure', { class: 'fig' }, img, note, h('figcaption', null, orig));
   }
 
   function openReader(id) {
@@ -647,7 +724,7 @@
     const id = S.readerId, m = S.mems.find(x => x.id === id);
     try { await S.sync.remove(id); }
     catch (err) { return toast('没有删除：' + friendly(err)); }
-    const paths = ((m && m.attachments) || []).map(a => a.path).filter(Boolean);
+    const paths = ((m && m.attachments) || []).flatMap(a => [a.path, a.preview]).filter(Boolean);
     if (paths.length && S.client && navigator.onLine) S.client.storage.from(BUCKET).remove(paths).catch(() => {});
     closeReader(); await reload(); toast('已删除。'); scheduleSync();
   });

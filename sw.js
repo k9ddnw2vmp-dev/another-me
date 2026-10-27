@@ -2,12 +2,14 @@
  * Lets the app open and work offline. Memories and sign-in never pass through this cache:
  * requests to Supabase always go straight to the network.
  */
-const VERSION = 'another-me-7';
+const VERSION = 'another-me-8';
 const SHELL = ['./', 'index.html', 'app.js', 'core.js', 'sync.js', 'sky.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
 ];
+// Fetched only when a HEIC photo needs converting; cached after its first use.
+const LAZY = ['https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js'];
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
@@ -59,7 +61,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
-  if (LIBS.includes(request.url) || url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com') {
+  if (LIBS.includes(request.url) || LAZY.includes(request.url) || url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com') {
     event.respondWith(cacheFirst(request));
   } else if (url.origin === self.location.origin) {
     event.respondWith(networkFirst(request));
