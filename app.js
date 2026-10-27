@@ -442,25 +442,23 @@
     return att;
   }
 
-  /* HEIC is the iPhone's photo format and only Safari can display it. */
-  const HEIC_LIB = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+  /* HEIC is the iPhone's photo format and only Safari can display it. heic-to follows libheif releases,
+   * so it keeps up with photos from new iPhones (heic2any's 2019 decoder could not read them). */
+  const HEIC_LIB = 'https://cdn.jsdelivr.net/npm/heic-to@1.6.5/dist/iife/heic-to.js';
   const isHeic = a => /image\/hei[cf]/i.test(a.type || '') || /\.hei[cf]$/i.test(a.name || '');
   let heicLib = null;
   function loadHeic() {
-    if (window.heic2any) return Promise.resolve(window.heic2any);
+    if (window.HeicTo) return Promise.resolve(window.HeicTo);
     return heicLib || (heicLib = new Promise((ok, bad) => {
       const el = h('script', { src: HEIC_LIB });
-      el.onload = () => ok(window.heic2any);
+      el.onload = () => (window.HeicTo ? ok(window.HeicTo) : bad(new Error('照片转换工具没有加载成功')));
       el.onerror = () => { heicLib = null; bad(new Error('照片转换工具没有加载成功，请联网后再打开')); };
       document.head.append(el);
     }));
   }
   async function jpegFrom(blob) {
     let bmp = await createImageBitmap(blob).catch(() => null); // Safari decodes HEIC itself
-    if (!bmp) {
-      const out = await (await loadHeic())({ blob, toType: 'image/jpeg', quality: 0.92 });
-      bmp = await createImageBitmap(Array.isArray(out) ? out[0] : out);
-    }
+    if (!bmp) bmp = await (await loadHeic())({ blob, type: 'bitmap' });
     const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
     const c = h('canvas', { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
@@ -555,7 +553,7 @@
   $('f-files').addEventListener('change', async e => {
     const files = [...e.target.files]; e.target.value = '';
     for (const file of files) {
-      msg(`正在上传「${file.name}」…`);
+      msg(isHeic({ name: file.name, type: file.type }) ? `正在上传「${file.name}」，并转换成所有设备都能显示的照片…` : `正在上传「${file.name}」…`);
       try { S.form.attachments.push(await uploadFile(file)); renderAtt(); saveDraft(); msg(''); }
       catch (err) { msg(`「${file.name}」没有上传：${friendly(err)}。`); }
     }
@@ -671,7 +669,7 @@
         img.src = URL.createObjectURL(jpg); img.hidden = false; note.textContent = '';
         keepPreview(a, jpg);
       } catch (err) {
-        note.textContent = `这张照片在这台设备上转换不了（${friendly(err)}）。原件完好，可以下载后查看。`;
+        note.textContent = `这张照片在这台设备上转换不了（${friendly(err)}）。用 iPhone 打开一次这段记忆，就会生成所有设备都能显示的版本。原件完好，也可以下载后查看。`;
       }
     };
     (async () => {
@@ -680,7 +678,15 @@
       const url = await mediaUrl(a);
       if (!url) return;
       img.onerror = () => { img.onerror = null; convert(); };
-      img.src = url; // Safari shows the original directly
+      // Safari shows the original directly; it then makes the copy so other browsers needn't convert.
+      img.onload = () => {
+        img.onload = null;
+        if (S.mode !== 'cloud' || a.preview) return;
+        S.client.storage.from(BUCKET).download(a.path)
+          .then(({ data, error }) => { if (error) throw error; return jpegFrom(data); })
+          .then(jpg => keepPreview(a, jpg)).catch(() => {});
+      };
+      img.src = url;
     })();
     return h('figure', { class: 'fig' }, img, note, h('figcaption', null, orig));
   }
