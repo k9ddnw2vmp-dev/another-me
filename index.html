@@ -177,6 +177,12 @@ button { cursor: pointer; }
   font: 400 clamp(2.2rem, 7vw, 4.2rem)/1.05 var(--f-display); color: var(--ink);
 }
 button.chapter-title:hover { color: var(--blue); }
+.chapter-ex {
+  margin: 0; padding: 0; border: 0; background: none; text-align: left; max-width: 62ch;
+  font-size: 16px; line-height: 1.7; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+button.chapter-ex:hover { color: var(--blue); }
 .callout { display: grid; gap: 14px; padding: 24px; background: var(--wash); }
 .callout p { margin: 0; }
 

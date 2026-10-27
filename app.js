@@ -316,8 +316,10 @@
       tl.append(h('section', { class: 'chapter' },
         h('div', { class: 'chapter-head' },
           h('span', { class: 'chapter-no', text: `第 ${i + 1} 章 · ${g.range ? g.range.label : (g.chapter.whenText || '时间未定')}` }),
-          h('button', { type: 'button', class: 'chapter-title', text: AM.titleOf(g.chapter), onclick: () => openReader(g.chapter.id) })),
-        items.length ? h('ol', { class: 'entries' }, items.map(entryRow)) : h('p', { class: 'muted small', style: 'margin:0', text: '这一章里还没有记忆。' })));
+          h('button', { type: 'button', class: 'chapter-title', text: AM.titleOf(g.chapter), onclick: () => openReader(g.chapter.id) }),
+          g.chapter.body ? h('button', { type: 'button', class: 'chapter-ex', text: g.chapter.body, onclick: () => openReader(g.chapter.id) }) : null),
+        items.length ? h('ol', { class: 'entries' }, items.map(entryRow))
+          : h('p', { class: 'muted small', style: 'margin:0', text: '还没有归进这一章的记忆。写下这段时间里发生的事，它会自动出现在这里。' })));
     });
     if (groups.length) tl.append(h('div', null, h('button', { type: 'button', class: 'link', onclick: () => openEditor({ promptId: 'A1' }) }, '＋ 再加一章')));
     const tail = [['章节之外', unplaced.filter(keep), '这些记忆有时间，但不在任何一章的范围里。'], ['时间未定', undated.filter(keep), '没有写时间，或写的时间无法识别。']];
