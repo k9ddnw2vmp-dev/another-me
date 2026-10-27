@@ -2,7 +2,7 @@
  * Lets the app open and work offline. Memories and sign-in never pass through this cache:
  * requests to Supabase always go straight to the network.
  */
-const VERSION = 'another-me-2';
+const VERSION = 'another-me-3';
 const SHELL = ['./', 'index.html', 'app.js', 'core.js', 'sync.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const LIBS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
@@ -35,11 +35,13 @@ async function cacheFirst(request) {
 }
 
 // The app's own files: try the network so updates arrive, fall back to the cache when offline or slow.
+// `no-cache` makes the browser revalidate with GitHub Pages instead of reusing its 10-minute HTTP cache,
+// so a new release reaches installed devices on the next launch.
 async function networkFirst(request) {
   const cache = await caches.open(VERSION);
   try {
     const res = await Promise.race([
-      fetch(request),
+      fetch(new Request(request.url, { cache: 'no-cache', credentials: 'same-origin' })),
       new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), 4000)),
     ]);
     if (res.ok) cache.put(request, res.clone());
