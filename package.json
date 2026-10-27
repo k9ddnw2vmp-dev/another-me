@@ -1,0 +1,11 @@
+{
+  "name": "another-me",
+  "private": true,
+  "description": "另一个我：一个问题一个问题地记下自己的人生。",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
