@@ -81,13 +81,13 @@ button { cursor: pointer; }
   padding-block: 14px; background: var(--paper); border-bottom: 1px solid var(--rule);
 }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
-.brand b { font: 400 24px/1 var(--f-display); }
+.brand b { font: 400 24px/1 var(--f-display); white-space: nowrap; }
 .brand i { font: 400 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--blue); font-style: normal; }
 .dot { width: 9px; height: 9px; border: 1.5px solid var(--blue); flex: none; }
 .dot[data-state="synced"] { background: var(--blue); }
 .dot[data-state="busy"] { animation: pulse 1s steps(2) infinite; }
 .dot[data-state="error"] { border-color: var(--alert); background: var(--alert); }
-.nav { display: flex; gap: 4px; }
+.nav { display: flex; gap: 4px; flex: none; }
 .nav button {
   border: 0; background: none; padding: 8px 10px; font: 500 13px/1 var(--f-mono); letter-spacing: .06em; color: var(--mute);
 }
@@ -185,6 +185,28 @@ button.chapter-title:hover { color: var(--blue); }
 button.chapter-ex:hover { color: var(--blue); }
 .callout { display: grid; gap: 14px; padding: 24px; background: var(--wash); }
 .callout p { margin: 0; }
+
+/* sky: every memory a star */
+.sky { display: grid; background: var(--sheet); color: var(--on-sheet); }
+.sky-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 18px 24px 0; }
+.sky-count { margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.sky-count b { font: 400 clamp(2.6rem, 8vw, 4.4rem)/1 var(--f-display); }
+.sky-count span { font: 400 12px/1.5 var(--f-mono); letter-spacing: .08em; color: var(--on-sheet-soft); }
+.sky-play { border: 1.5px solid var(--on-sheet-rule); background: none; color: var(--on-sheet); padding: 9px 12px; font: 500 12px/1 var(--f-mono); letter-spacing: .06em; }
+.sky-play:hover, .sky-play[aria-pressed="true"] { background: var(--on-sheet); color: var(--sheet); border-color: var(--on-sheet); }
+.sky :focus-visible { outline-color: var(--on-sheet); }
+#sky { display: block; width: 100%; height: clamp(360px, 62vh, 620px); touch-action: manipulation; cursor: crosshair; }
+#sky:focus-visible { outline-offset: -4px; }
+.sky-card { display: grid; gap: 6px; min-height: 7.2em; padding: 16px 24px; border-top: 1px solid var(--on-sheet-rule); align-content: start; }
+.sky-card p { margin: 0; }
+.sky-card .k { font: 400 12px/1.5 var(--f-mono); letter-spacing: .06em; color: var(--on-sheet-soft); }
+.sky-card .t { font: 400 clamp(1.5rem, 4.6vw, 2.2rem)/1.2 var(--f-display); overflow-wrap: anywhere; }
+.sky-card .x { color: var(--on-sheet-soft); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sky-card .hint { color: var(--on-sheet-soft); font-size: 14px; }
+.sky-card .go { justify-self: start; margin-top: 6px; border: 0; padding: 12px 16px; background: var(--on-sheet); color: var(--sheet); font: 500 14px/1 var(--f-body); }
+.sky-legend { list-style: none; margin: 0; padding: 14px 24px 18px; display: flex; flex-wrap: wrap; gap: 8px 22px; border-top: 1px solid var(--on-sheet-rule); font: 400 12px/1.4 var(--f-mono); color: var(--on-sheet-soft); }
+.sky-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.sky-legend svg { width: 16px; height: 16px; fill: currentColor; color: var(--on-sheet); flex: none; }
 
 /* backup */
 .tree { margin: 0; padding: 20px; background: var(--wash); font: 400 13px/1.9 var(--f-mono); overflow-x: auto; white-space: pre; }
@@ -304,10 +326,16 @@ details.revs summary { cursor: pointer; font: 500 13px/1.4 var(--f-mono); color:
 @media (max-width: 640px) {
   .view { gap: 64px; padding-block: 32px 130px; }
   .brand i { display: none; }
+  .top { gap: 10px; }
+  .nav { gap: 2px; }
+  .nav button { padding: 8px 7px; white-space: nowrap; }
   .map-row { grid-template-columns: 1fr; gap: 6px; }
   .cell { width: 28px; height: 28px; }
   .entry { grid-template-columns: 1fr; gap: 2px; }
   .pair { grid-template-columns: 1fr; }
+  .sky { margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px))); }
+  .sky-top, .sky-card, .sky-legend { padding-inline: 16px; }
+  #sky { height: clamp(320px, 56vh, 520px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .caret, .cell.next, .dot[data-state="busy"] { animation: none; }
@@ -322,6 +350,7 @@ details.revs summary { cursor: pointer; font: 500 13px/1.4 var(--f-mono); color:
     <a class="brand" href="#today" id="brand"><b>另一个我</b><span class="dot" id="dot" data-state="idle" role="img" aria-label="同步状态"></span><i>Another Me</i></a>
     <nav class="nav" id="nav" aria-label="主要" hidden>
       <button type="button" data-view="today" aria-current="page">今天</button>
+      <button type="button" data-view="sky">星空</button>
       <button type="button" data-view="timeline">时间线</button>
       <button type="button" data-view="backup">备份</button>
     </nav>
@@ -394,6 +423,30 @@ details.revs summary { cursor: pointer; font: 500 13px/1.4 var(--f-mono); color:
         <div class="block-head"><h2 class="label" id="recent-label">最近写下</h2><button type="button" class="link" data-go="timeline">全部 →</button></div>
         <ol class="entries" id="recent"></ol>
       </section>
+    </section>
+
+    <!-- SKY -->
+    <section class="view" id="v-sky" aria-label="星空" hidden>
+      <div class="block">
+        <h1 class="page-title">星空</h1>
+        <p class="muted" style="margin:0;max-width:36em">你写下的每一段记忆，都是这里的一颗星，没有一颗是装饰。左边是更早的你，右边是今天；人生章节躺在地平线上，倒映在记忆之海里。</p>
+      </div>
+      <div class="sky">
+        <div class="sky-top">
+          <p class="sky-count"><b id="sky-n">0</b><span id="sky-sub">颗星</span></p>
+          <button type="button" class="sky-play" id="sky-play" aria-pressed="false">回放 · 一天天亮起来</button>
+        </div>
+        <canvas id="sky" tabindex="0" role="img" aria-label="记忆星空"></canvas>
+        <div class="sky-card" id="sky-card" aria-live="polite"></div>
+        <ul class="sky-legend" aria-label="图例">
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" opacity=".14"/><rect x="7" y="7" width="6" height="6"/></svg>清楚记得</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" opacity=".16"/><rect x="7" y="7" width="6" height="6" opacity=".5"/></svg>有些模糊</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6.5" y="6.5" width="7" height="7" fill="none" stroke="currentColor"/></svg>听别人说的</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="6" height="6"/><rect x="0" y="9.5" width="20" height="1" opacity=".7"/><rect x="9.5" y="0" width="1" height="20" opacity=".7"/></svg>关键场景</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="13" width="4" height="4"/><rect x="15" y="3" width="4" height="4"/><path d="M3 15 17 5" stroke="currentColor" stroke-width=".8" opacity=".6"/></svg>写到同一个人，连成星座</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="12" width="3" height="3"/><rect x="10" y="6" width="8" height="8"/></svg>写得越多，星越大</li>
+        </ul>
+      </div>
     </section>
 
     <!-- TIMELINE -->
@@ -540,6 +593,7 @@ details.revs summary { cursor: pointer; font: 500 13px/1.4 var(--f-mono); color:
 <script src="config.js"></script>
 <script src="core.js"></script>
 <script src="sync.js"></script>
+<script src="sky.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

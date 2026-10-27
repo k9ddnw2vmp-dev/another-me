@@ -156,7 +156,7 @@
   const lock = on => document.documentElement.classList.toggle('locked', on);
 
   /* ---------- screens ---------- */
-  const APP_VIEWS = ['today', 'timeline', 'backup'];
+  const APP_VIEWS = ['today', 'sky', 'timeline', 'backup'];
   const ALL_VIEWS = [...APP_VIEWS, 'login', 'setup'];
 
   function showGate(name, message) {
@@ -170,6 +170,7 @@
     if (!APP_VIEWS.includes(v)) v = 'today';
     S.view = v;
     for (const id of ALL_VIEWS) $('v-' + id).hidden = id !== v;
+    if (v === 'sky') showSky(); else sky.hide();
     document.querySelectorAll('.nav button').forEach(b => (b.dataset.view === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     safe(() => history.replaceState(null, '', '#' + v));
     if (!quiet) scrollTo(0, 0);
@@ -197,7 +198,7 @@
   function render() {
     S.nos = AM.numbers(S.mems);
     S.answered = AM.answeredPrompts(S.mems);
-    renderAsk(); renderMap(); renderRecent(); renderFilters(); renderTimeline(); renderBackup();
+    renderAsk(); renderMap(); renderRecent(); renderFilters(); renderTimeline(); renderSky(); renderBackup();
   }
 
   function renderSync() {
@@ -330,6 +331,55 @@
         h('ol', { class: 'entries' }, items.map(entryRow))));
     }
   }
+
+  /* ---------- sky: every memory a star ---------- */
+  const sky = AMSky.mount({
+    canvas: $('sky'),
+    onSelect: m => renderSkyCard(m),
+    onReplay: r => {
+      $('sky-play').setAttribute('aria-pressed', String(!!r));
+      $('sky-play').textContent = r ? '停止回放' : '回放 · 一天天亮起来';
+      if (!r) return renderSkyCount();
+      $('sky-n').textContent = r.count;
+      $('sky-sub').textContent = `颗星 · 第 ${r.day} 天 · ${r.date}`;
+    },
+  }, { onOpen: id => openReader(id) });
+  let skyFresh = 0;
+
+  function renderSky() {
+    const L = sky.update(S.mems);
+    renderSkyCount();
+    const n = L.stars.length;
+    $('sky').setAttribute('aria-label', n
+      ? `记忆星空：${n} 颗星，从 ${Math.floor(L.from)} 年到今天${L.undated ? `，其中 ${L.undated} 颗时间未定` : ''}。用左右方向键逐颗查看，回车打开。完整列表在「时间线」。`
+      : '记忆星空：还没有星星。');
+  }
+  function renderSkyCount() {
+    const L = sky.layout, n = L.stars.length;
+    const days = new Set(L.stars.map(s => s.day).filter(Boolean)).size;
+    $('sky-n').textContent = n;
+    $('sky-sub').textContent = !n ? '颗星' : [`颗星`, `${Math.floor(L.from)} — 今天`, `写了 ${days} 天`, skyFresh ? `上次来过之后新亮起 ${skyFresh} 颗` : null].filter(Boolean).join(' · ');
+    $('sky-play').hidden = n < 2;
+  }
+  function showSky() { skyFresh = sky.show(); renderSkyCount(); }
+  function renderSkyCard(m) {
+    const card = $('sky-card'); card.replaceChildren();
+    if (!m) {
+      card.append(h('p', { class: 'hint', text: sky.layout.stars.length
+        ? '点一颗星，看看它是哪段记忆；再点一次打开。电脑上也可以用左右方向键逐颗看。'
+        : '还没有星星。写下第一段记忆，这片天空会亮起第一颗星。' }));
+      if (!sky.layout.stars.length) card.append(h('button', { type: 'button', class: 'go', onclick: () => $('ask-go').click() }, '写第一段记忆 →'));
+      return;
+    }
+    const kind = AM.KINDS[m.kind] ? AM.KINDS[m.kind].label : '记忆';
+    const bits = [no4(m.id), kind, AM.whenLabel(m) || '时间未定', m.certainty && AM.CERTAINTY[m.certainty]].filter(Boolean);
+    card.append(
+      h('p', { class: 'k', text: bits.join(' · ') }),
+      h('p', { class: 't', text: AM.titleOf(m) }),
+      m.body ? h('p', { class: 'x', text: m.body }) : null,
+      h('button', { type: 'button', class: 'go', onclick: () => openReader(m.id) }, '打开这段记忆 →'));
+  }
+  $('sky-play').addEventListener('click', () => sky.replay());
 
   function renderBackup() {
     const count = k => S.mems.filter(m => m.kind === k).length;
